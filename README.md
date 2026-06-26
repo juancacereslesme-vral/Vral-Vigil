@@ -91,7 +91,4 @@ Measured on AMD EPYC 7B13 (Google Cloud). Window size W=1024 samples at 12 kHz (
 
 ## License
 
-| Component | License |
-|-----------|---------|
-| Documentation and examples (this repo) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
-| VRAL compiler (`vralc`) and runtime | Elastic License 2.0 (ELv2) |
+This repository is licensed under the [Elastic License 2.0 (ELv2)](LICENSE).

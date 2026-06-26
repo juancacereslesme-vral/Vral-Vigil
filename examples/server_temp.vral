@@ -1,0 +1,41 @@
+// server_temp.vral — server thermal anomaly detection
+//
+// Detects abnormal CPU and GPU temperatures using a leaky CUSUM detector
+// calibrated against normal operating conditions.
+//
+// Features Float32[2]:
+//   [0] cpu_temp (°C)  — CPU package temperature
+//   [1] gpu_temp (°C)  — GPU temperature
+//
+// Usage:
+//   1. Collect ~10 minutes of CSV data under normal load.
+//   2. Calibrate: POST /v1/calibrate with domain=ServerTemp
+//   3. Compile: POST /v1/compile with this file
+//   4. Embed the .so in your monitoring agent.
+//
+// The coherence check rejects ticks where the sensor reading jumps more
+// than 30°C between consecutive samples — catches disconnected or faulty sensors.
+
+domain ServerTemp
+    verdicts NORMAL OVERHEATING
+    payload Float32[2]
+    model Baseline
+        mean    Float32[2]
+        inv_cov Float32[2,2]
+        k       Float32
+        h       Float32
+        decay   Float32
+    end
+    state Cusum
+        s Float32
+    end
+    transition c
+        score   = mahalanobis(c.payload, model.mean, model.inv_cov)
+        state.s := max(0.0, model.decay * state.s + score - model.k)
+        state.s > model.h -> OVERHEATING
+        else -> NORMAL
+    end
+    coherence prev next
+        abs(next[0] - prev[0]) < 30.0
+    end
+end

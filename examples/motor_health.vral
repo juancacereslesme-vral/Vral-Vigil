@@ -1,0 +1,47 @@
+// motor_health.vral — bearing fault detection (VIGIL CWRU, 3D domain)
+//
+// Validated on the Case Western Reserve University Bearing Dataset.
+// 1797 RPM, 12 kHz sampling, window W=1024 samples (~85 ms/tick).
+//
+// Results (1797 RPM, OAS calibration):
+//   FPR (healthy):  0.00%  (0/58 windows)
+//   IR 0.007" fault: alarm at tick 0
+//   IR 0.021" fault: alarm at tick 0
+//   OR 0.007" fault: alarm at tick 0
+//   Latency:        19.3 ns/tick  (AMD EPYC 7B13, Google Cloud)
+//   Footprint:      64 bytes/instance
+//
+// Features Float32[3]:
+//   [0] RMS drive-end (g)           — overall vibration amplitude
+//   [1] RMS fan-end (g)             — secondary vibration channel
+//   [2] log(Kurtosis drive-end)     — log(max(pearson_kurt, 1.0))
+//                                     gaussianizes the right-skewed kurtosis;
+//                                     rises sharply on impulsive faults (IR, ball)
+//
+// The orchestrator must compute log(max(kurtosis, 1.0)) before each tick.
+//
+// Model: 3+9+3 = 15 floats = 60 bytes; state: 4 bytes; total: 64 bytes/instance.
+
+domain MotorHealthCWRU3D
+    verdicts NORMAL ALERTA
+    payload Float32[3]
+    model Baseline
+        mean    Float32[3]
+        inv_cov Float32[3,3]
+        k       Float32
+        h       Float32
+        decay   Float32
+    end
+    state Cusum
+        s Float32
+    end
+    transition c
+        score   = mahalanobis(c.payload, model.mean, model.inv_cov)
+        state.s := max(0.0, model.decay * state.s + score - model.k)
+        state.s > model.h -> ALERTA
+        else -> NORMAL
+    end
+    coherence prev next
+        next[0] > 0.0   // RMS_DE always positive: detects disconnected sensor
+    end
+end

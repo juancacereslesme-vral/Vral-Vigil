@@ -1,0 +1,37 @@
+// aircraft_vibration.vral — Structural health monitoring, airframe
+//
+// Features Float32[3] per tick (sampled at ~1 kHz, windowed 512 samples):
+//   [0] RMS_X  (g)  — lateral accelerometer
+//   [1] RMS_Z  (g)  — vertical accelerometer
+//   [2] logKurt     — log(Pearson kurtosis) of Z axis; rises on crack/fatigue
+//
+// Calibrate on normal cruise data. Re-calibrate per flight regime (takeoff,
+// cruise, landing) using the multi-speed orchestration pattern.
+//
+// Verdicts:
+//   NOMINAL  — vibration signature within calibrated envelope
+//   ANOMALY  — deviation detected; cross-check with maintenance log
+
+domain AircraftVibration
+    verdicts NOMINAL ANOMALY
+    payload Float32[3]
+    model FlightEnvelope
+        mean    Float32[3]
+        inv_cov Float32[3,3]
+        k       Float32
+        h       Float32
+        decay   Float32
+    end
+    state Cusum
+        s Float32
+    end
+    transition c
+        score   = mahalanobis(c.payload, model.mean, model.inv_cov)
+        state.s := max(0.0, model.decay * state.s + score - model.k)
+        state.s > model.h -> ANOMALY
+        else              -> NOMINAL
+    end
+    coherence prev next
+        next[0] > 0.0
+    end
+end

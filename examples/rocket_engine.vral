@@ -1,0 +1,37 @@
+// rocket_engine.vral — Liquid propellant engine health, real-time
+//
+// Features Float32[3] per tick (10 ms window, ~100 Hz telemetry):
+//   [0] Pc_norm   — chamber pressure normalized to nominal (1.0 = nominal)
+//   [1] MR_norm   — mixture ratio O/F normalized to nominal
+//   [2] Isp_norm  — specific impulse normalized to nominal
+//
+// Calibrate on static fire baseline. Anomaly = combustion instability,
+// oxidizer-rich burn, or turbopump degradation.
+//
+// Verdicts:
+//   STABLE    — engine operating within nominal envelope
+//   CUTOFF    — immediate shutdown recommended
+
+domain RocketEngine
+    verdicts STABLE CUTOFF
+    payload Float32[3]
+    model NominalBurn
+        mean    Float32[3]
+        inv_cov Float32[3,3]
+        k       Float32
+        h       Float32
+        decay   Float32
+    end
+    state Cusum
+        s Float32
+    end
+    transition c
+        score   = mahalanobis(c.payload, model.mean, model.inv_cov)
+        state.s := max(0.0, model.decay * state.s + score - model.k)
+        state.s > model.h -> CUTOFF
+        else              -> STABLE
+    end
+    coherence prev next
+        next[0] > 0.0
+    end
+end

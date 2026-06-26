@@ -1,0 +1,38 @@
+// f1_powertrain.vral — Formula 1 hybrid powertrain health
+//
+// Features Float32[4] per tick (sampled every 50 ms, ~20 Hz):
+//   [0] rpm_delta      — RPM deviation from expected (% of target)
+//   [1] oil_pressure   — normalized oil pressure (1.0 = nominal)
+//   [2] exhaust_egts   — exhaust gas temp normalized (1.0 = nominal)
+//   [3] mgu_h_power    — MGU-H energy recovery normalized
+//
+// Calibrate per circuit + ambient temp. In-race re-calibration via pit wall.
+// Anomaly detected mid-sector triggers "lift and coast" instruction.
+//
+// Verdicts:
+//   GREEN   — powertrain within race envelope
+//   YELLOW  — degradation detected; reduce load
+
+domain F1Powertrain
+    verdicts GREEN YELLOW
+    payload Float32[4]
+    model RaceEnvelope
+        mean    Float32[4]
+        inv_cov Float32[4,4]
+        k       Float32
+        h       Float32
+        decay   Float32
+    end
+    state Cusum
+        s Float32
+    end
+    transition c
+        score   = mahalanobis(c.payload, model.mean, model.inv_cov)
+        state.s := max(0.0, model.decay * state.s + score - model.k)
+        state.s > model.h -> YELLOW
+        else              -> GREEN
+    end
+    coherence prev next
+        next[1] > 0.0
+    end
+end

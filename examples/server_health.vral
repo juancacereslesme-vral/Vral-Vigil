@@ -1,0 +1,37 @@
+// server_health.vral — Data center server health (IT/cloud)
+//
+// Features Float32[3] per tick (30-second polling window):
+//   [0] cpu_util_norm  — CPU utilization normalized (0–1, 1.0 = 100%)
+//   [1] mem_pressure   — memory pressure ratio (active / total)
+//   [2] io_wait_norm   — I/O wait normalized to workload baseline
+//
+// Calibrate during known-good production traffic. Anomaly = silent hardware
+// fault, memory leak, runaway process, or storage degradation.
+//
+// Verdicts:
+//   OK      — server within normal operating envelope
+//   ALERT   — investigate; possible hardware or software fault
+
+domain ServerHealth
+    verdicts OK ALERT
+    payload Float32[3]
+    model WorkloadBaseline
+        mean    Float32[3]
+        inv_cov Float32[3,3]
+        k       Float32
+        h       Float32
+        decay   Float32
+    end
+    state Cusum
+        s Float32
+    end
+    transition c
+        score   = mahalanobis(c.payload, model.mean, model.inv_cov)
+        state.s := max(0.0, model.decay * state.s + score - model.k)
+        state.s > model.h -> ALERT
+        else              -> OK
+    end
+    coherence prev next
+        next[0] > 0.0
+    end
+end

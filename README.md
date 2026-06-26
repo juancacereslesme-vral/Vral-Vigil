@@ -1,4 +1,4 @@
-# VRAL — Verified Runtime Anomaly Language
+# VRAL
 
 VRAL is a domain-specific language for writing **verified decision kernels**: small, auditable, side-effect-free programs that can be compiled to native shared libraries and embedded in any application or firmware.
 
@@ -42,8 +42,13 @@ VRAL enforces these properties through four axioms checked at compile time — n
 | [`GRAMMAR.md`](GRAMMAR.md) | Formal EBNF grammar of the VRAL language |
 | [`ABI.md`](ABI.md) | Generated `.so` ABI contract |
 | [`architecture/no-syscalls.md`](architecture/no-syscalls.md) | Architectural rationale for the no-syscalls constraint |
-| [`examples/server_temp.vral`](examples/server_temp.vral) | Minimal example: server thermal anomaly detection |
-| [`examples/motor_health.vral`](examples/motor_health.vral) | Industrial example: bearing fault detection (CWRU validated) |
+| [`examples/server_temp.vral`](examples/server_temp.vral) | Server thermal anomaly detection |
+| [`examples/server_health.vral`](examples/server_health.vral) | Server health (CPU, memory, latency) |
+| [`examples/motor_health.vral`](examples/motor_health.vral) | Bearing fault detection (CWRU validated, FPR=0.00%) |
+| [`examples/aircraft_vibration.vral`](examples/aircraft_vibration.vral) | Aircraft structural vibration monitoring |
+| [`examples/wind_turbine.vral`](examples/wind_turbine.vral) | Wind turbine drivetrain anomaly detection |
+| [`examples/f1_powertrain.vral`](examples/f1_powertrain.vral) | F1 powertrain performance monitoring |
+| [`examples/rocket_engine.vral`](examples/rocket_engine.vral) | Rocket engine combustion anomaly detection |
 
 ---
 
@@ -86,4 +91,7 @@ Measured on AMD EPYC 7B13 (Google Cloud). Window size W=1024 samples at 12 kHz (
 
 ## License
 
-Documentation and examples in this repository are released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+| Component | License |
+|-----------|---------|
+| Documentation and examples (this repo) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| VRAL compiler (`vralc`) and runtime | Elastic License 2.0 (ELv2) |

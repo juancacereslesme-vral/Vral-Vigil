@@ -1,0 +1,37 @@
+// wind_turbine.vral — Offshore wind turbine drivetrain health
+//
+// Features Float32[3] per tick (1-minute SCADA window):
+//   [0] main_bearing_rms   — main bearing vibration RMS (m/s²)
+//   [1] gearbox_oil_temp   — gearbox oil temperature delta from ambient (°C)
+//   [2] power_deviation    — actual vs expected power curve deviation (%)
+//
+// Calibrate per wind speed band (m/s). Multi-speed orchestration selects
+// the nearest calibrated model at runtime — .so never changes.
+//
+// Verdicts:
+//   HEALTHY     — within calibrated normal envelope
+//   INSPECT     — schedule next maintenance window
+
+domain WindTurbine
+    verdicts HEALTHY INSPECT
+    payload Float32[3]
+    model WindBand
+        mean    Float32[3]
+        inv_cov Float32[3,3]
+        k       Float32
+        h       Float32
+        decay   Float32
+    end
+    state Cusum
+        s Float32
+    end
+    transition c
+        score   = mahalanobis(c.payload, model.mean, model.inv_cov)
+        state.s := max(0.0, model.decay * state.s + score - model.k)
+        state.s > model.h -> INSPECT
+        else              -> HEALTHY
+    end
+    coherence prev next
+        next[0] > 0.0
+    end
+end
